@@ -150,9 +150,11 @@ def parse_segment_spec(raw_segment: str, index: int) -> tuple[float, float, str]
 
 def build_output_structure(output_dir: Path, clip_count: int, render_clips: bool) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "analysis").mkdir(parents=True, exist_ok=True)
+    (output_dir / "template").mkdir(parents=True, exist_ok=True)
+    (output_dir / "comparison").mkdir(parents=True, exist_ok=True)
     if render_clips:
-        (output_dir / "clips").mkdir(parents=True, exist_ok=True)
-        (output_dir / "audio").mkdir(parents=True, exist_ok=True)
+        (output_dir / "template" / "clips").mkdir(parents=True, exist_ok=True)
     if clip_count == 0:
         (output_dir / "notes.txt").write_text("No cuts generated.\n", encoding="utf-8")
 
@@ -619,6 +621,8 @@ def main(argv: List[str] | None = None) -> int:
     try:
         ffmpeg_executable = ensure_ffmpeg()
         output_dir = args.output_dir
+        analysis_dir = output_dir / "analysis"
+        template_dir = output_dir / "template"
         if args.render_template:
             args.placeholders = True
         if (args.placeholder_width is None) != (args.placeholder_height is None):
@@ -656,13 +660,16 @@ def main(argv: List[str] | None = None) -> int:
                         label=label,
                         start=start,
                         end=end,
-                        output_path=f"clips/{label}.mp4",
+                        output_path=f"template/clips/{label}.mp4",
                     )
                 )
 
+        for segment in segments:
+            segment.output_path = f"template/clips/{Path(segment.output_path).name}"
+
         build_output_structure(output_dir, len(segments), args.render_clips)
         generate_manifest(
-            output_dir,
+            analysis_dir,
             args.video,
             segments,
             audio_preserved=args.render_clips and not args.no_audio,
@@ -685,7 +692,7 @@ def main(argv: List[str] | None = None) -> int:
         if args.placeholders:
             placeholder_files = []
             for index, segment in enumerate(segments):
-                placeholder_file = output_dir / "placeholders" / Path(segment.output_path).name
+                placeholder_file = template_dir / "placeholders" / Path(segment.output_path).name
                 placeholder_files.append(placeholder_file)
                 create_placeholder(
                     placeholder_file,
@@ -698,7 +705,7 @@ def main(argv: List[str] | None = None) -> int:
                 )
             if args.render_template and segments:
                 render_template_video(
-                    output_dir / "template.mp4",
+                    template_dir / "template.mp4",
                     placeholder_files,
                     args.video,
                     segments[0].start,
@@ -706,15 +713,15 @@ def main(argv: List[str] | None = None) -> int:
                     ffmpeg_executable,
                 )
 
-        write_notes(output_dir, segments, args.render_clips)
+        write_notes(analysis_dir, segments, args.render_clips)
         if not args.no_html:
-            write_manifest_html(output_dir, segments)
+            write_manifest_html(analysis_dir, segments)
         if args.export_edl:
             if args.placeholders:
                 for segment in segments:
-                    segment.output_path = f"placeholders/{Path(segment.output_path).name}"
+                    segment.output_path = f"template/placeholders/{Path(segment.output_path).name}"
                 generate_manifest(
-                    output_dir,
+                    analysis_dir,
                     args.video,
                     segments,
                     audio_preserved=False,
@@ -723,7 +730,7 @@ def main(argv: List[str] | None = None) -> int:
                     width=placeholder_width,
                     height=placeholder_height,
                 )
-            write_edl(output_dir, args.video, segments, args.fps, use_placeholders=args.placeholders)
+            write_edl(analysis_dir, args.video, segments, args.fps, use_placeholders=args.placeholders)
 
         mode = "clip(s)" if args.render_clips else "manifest segment(s)"
         print(f"Created {len(segments)} {mode} in {output_dir}")

@@ -54,8 +54,8 @@ python video_cut_extractor.py "source.mp4" \\
   --output-dir "world-is-yours-template"
 ```
 
-This default workflow creates `manifest.json`, `notes.txt`, and a self-contained
-`manifest.html` timeline viewer. Open `manifest.html` in a browser to inspect
+This default workflow creates `analysis/manifest.json`, `analysis/notes.txt`, and a self-contained
+`analysis/manifest.html` timeline viewer. Open `analysis/manifest.html` in a browser to inspect
 the detected cut rhythm. To also
 render one audio-preserving MP4 per detected shot, add:
 
@@ -74,7 +74,7 @@ python video_cut_extractor.py "source.mp4" \\
   --output-dir "resolve-template"
 ```
 
-This creates `timeline.edl`. In Resolve, use `File > Import Timeline > Pre-conformed EDL`.
+This creates `analysis/timeline.edl`. In Resolve, use `File > Import Timeline > Pre-conformed EDL`.
 The EDL carries video timing and source references; keep the original audio on a
 separate track because CMX3600 EDL support for audio varies by editor.
 
@@ -90,7 +90,7 @@ python video_cut_extractor.py "source.mp4" \\
   --output-dir "resolve-template"
 ```
 
-This creates `placeholders/shot-001.mp4`, `placeholders/shot-002.mp4`, and so
+This creates `template/placeholders/shot-001.mp4`, `template/placeholders/shot-002.mp4`, and so
 on. The EDL references those neutral clips rather than the reference video.
 Import the placeholder media and `timeline.edl` into Resolve, then use
 `Replace Selected Clip` or replace the placeholder media in the Media Pool with
@@ -126,8 +126,8 @@ python video_cut_extractor.py "source.mp4" \\
   --output-dir "kdenlive-portrait-template"
 ```
 
-This creates `template.mp4` for immediate preview/import into Kdenlive, along
-with the individual `placeholders/` clips and `timeline.edl` when
+This creates `template/template.mp4` for immediate preview/import into Kdenlive, along
+with the individual `template/placeholders/` clips and `analysis/timeline.edl` when
 `--export-edl` is also supplied.
 
 Lower `--threshold` finds more changes. Increase `--min-shot-length` to group
@@ -145,3 +145,41 @@ map: review the generated timings before treating it as a final template.
 ## Notes
 
 This tool is designed for creating an editable cut package, not for final color grading or compositing. It is intentionally lightweight and works well with a source video and an external timeline editor such as DaVinci Resolve. The generated `manifest.json` is written before optional clip rendering so a long run can be inspected without waiting for media exports.
+
+## Compare a generated sequence
+
+Use `compare_video.py` to create a throwaway synchronized comparison. The
+reference is shown on the left, the generated template on the right, and a
+white divider marks the boundary. Audio comes from the reference video.
+
+```powershell
+python compare_video.py `
+  --reference "Nas - The World Is Yours (Official HD Video) - Nas (1080p).mp4" `
+  --generated "output\world-is-yours-0228-0259\template\template.mp4" `
+  --start "02:28" `
+  --end "02:59" `
+  --project-dir "output\world-is-yours-0228-0259"
+```
+
+The default output uses two `960x1080` panels. The original landscape video is
+letterboxed on the left and the portrait template is letterboxed on the right,
+so both timelines remain visible and synchronized.
+
+## Output structure
+
+Each run uses the output directory as a project bundle:
+
+```text
+project-output/
+├── analysis/
+│   ├── manifest.json
+│   ├── manifest.html
+│   ├── notes.txt
+│   └── timeline.edl
+├── template/
+│   ├── template.mp4
+│   ├── template-audio.m4a
+│   └── placeholders/
+└── comparison/
+  └── reference-vs-template.mp4
+```
