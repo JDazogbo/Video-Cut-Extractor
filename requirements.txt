@@ -1,0 +1,1 @@
+# No Python package dependencies are required for the CLI. FFmpeg must be installed and available on PATH.

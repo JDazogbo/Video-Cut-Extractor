@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.log
+*.mp4
+*.mov
+*.mkv
+*.wav
+*.aac
+*.zip
+output/
+releases/
+.DS_Store
